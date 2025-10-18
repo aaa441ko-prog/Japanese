@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日语句子分段 & 假名标注</title>
 <style>
 body {
@@ -69,7 +69,6 @@ ruby rt {
 
 <script src="kuromoji.js"></script>
 <script>
-// 构建 kuromoji 分词器
 kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
   if (err) {
     console.error('Tokenizer 构建失败', err);
@@ -77,32 +76,29 @@ kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
     return;
   }
 
-  console.log('Tokenizer ready');
-
   const button = document.getElementById("process");
   const outputDiv = document.getElementById("output");
 
-  // 只绑定一次点击事件
   button.addEventListener("click", () => {
     const text = document.getElementById("input").value.trim();
-    if (!text) return;
-
-    // 清空输出
-    outputDiv.innerHTML = '';
+    if (!text) {
+      outputDiv.innerHTML = '';
+      return;
+    }
 
     // 按句号、问号、感叹号分句
     const sentences = text.split(/(?<=[。！？!?])/u).map(s => s.trim()).filter(Boolean);
 
-    // 分词 + 假名标注
-    const annotated = sentences.map(sentence => {
+    // 每句生成带假名的 HTML
+    const annotatedHtml = sentences.map(sentence => {
       const tokens = tokenizer.tokenize(sentence);
       return tokens.map(token => {
         const reading = token.reading || token.surface_form;
         return `<ruby><rb>${token.surface_form}</rb><rt>${reading}</rt></ruby>`;
-      }).join('');
-    });
+      }).join(''); // 每个句子内不加空格，保持原句紧凑
+    }).join('<br>'); // 句子之间换行
 
-    outputDiv.innerHTML = annotated.join('<br>');
+    outputDiv.innerHTML = annotatedHtml;
   });
 });
 </script>
