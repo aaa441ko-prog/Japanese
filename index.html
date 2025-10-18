@@ -79,20 +79,21 @@ kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
 
   console.log('Tokenizer ready');
 
-  // 只绑定一次事件
   const button = document.getElementById("process");
   const outputDiv = document.getElementById("output");
 
+  // 只绑定一次点击事件
   button.addEventListener("click", () => {
     const text = document.getElementById("input").value.trim();
     if (!text) return;
 
-    // 清空上一次输出
+    // 清空输出
     outputDiv.innerHTML = '';
 
     // 按句号、问号、感叹号分句
     const sentences = text.split(/(?<=[。！？!?])/u).map(s => s.trim()).filter(Boolean);
 
+    // 分词 + 假名标注
     const annotated = sentences.map(sentence => {
       const tokens = tokenizer.tokenize(sentence);
       return tokens.map(token => {
@@ -107,4 +108,3 @@ kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
 </script>
 </body>
 </html>
-
