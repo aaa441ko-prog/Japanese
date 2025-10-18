@@ -1,0 +1,175 @@
+<!-- index.html for Japanese Furigana Web Tool -->
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>日语分段与假名标注工具</title>
+    <link rel="icon" href="data:," />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+
+    <!-- React Component Code -->
+    <script type="text/babel">
+      function FuriganaTool() {
+        const [tokenizer, setTokenizer] = React.useState(null);
+        const [loading, setLoading] = React.useState(true);
+        const [input, setInput] = React.useState("今日はいい天気ですね。明日もがんばろう。");
+        const [outputHtml, setOutputHtml] = React.useState("");
+        const [showSegments, setShowSegments] = React.useState(true);
+        const [error, setError] = React.useState(null);
+
+        React.useEffect(() => {
+          async function load() {
+            setLoading(true);
+            setError(null);
+            try {
+              if (!window.wanakana) {
+                await new Promise((res) => {
+                  const s = document.createElement("script");
+                  s.src = "https://unpkg.com/wanakana@4.0.2/umd/wanakana.min.js";
+                  s.onload = res;
+                  s.onerror = () => res();
+                  document.head.appendChild(s);
+                });
+              }
+              if (!window.kuromoji) {
+                await new Promise((res, rej) => {
+                  const s = document.createElement("script");
+                  s.src = "https://unpkg.com/kuromoji@0.1.2/dist/kuromoji.js";
+                  s.onload = res;
+                  s.onerror = rej;
+                  document.head.appendChild(s);
+                });
+              }
+              window.kuromoji.builder({ dicPath: "https://unpkg.com/kuromoji@0.1.2/dist/dict/" }).build((err, tk) => {
+                if (err) {
+                  console.error(err);
+                  setError("无法加载分词词库（kuromoji）");
+                  setLoading(false);
+                  return;
+                }
+                setTokenizer(tk);
+                setLoading(false);
+              });
+            } catch (e) {
+              console.error(e);
+              setError("加载外部库失败，请检查网络或尝试刷新页面。");
+              setLoading(false);
+            }
+          }
+          load();
+        }, []);
+
+        function hasKanji(s) {
+          return /[一-龯々]/.test(s);
+        }
+
+        function escapeHtml(str) {
+          return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function processText(text) {
+          if (!tokenizer) return "";
+          const sentences = text
+            .split(/(?<=[。！？!?\.])/u)
+            .map((s) => s.trim())
+            .filter(Boolean);
+
+          const parts = sentences.map((sentence) => {
+            const tokens = tokenizer.tokenize(sentence);
+            const htmlTokens = tokens.map((t) => {
+              const surface = t.surface_form;
+              const reading = t.reading || "";
+              const hiragana = reading ? window.wanakana.toHiragana(reading) : "";
+
+              if (hasKanji(surface) && hiragana) {
+                return `<ruby><rb>${escapeHtml(surface)}</rb><rt>${escapeHtml(hiragana)}</rt></ruby>`;
+              }
+              return `<span>${escapeHtml(surface)}</span>`;
+            });
+            const joined = showSegments ? htmlTokens.join("<span class='mx-1 text-gray-400'>·</span>") : htmlTokens.join("");
+            return `<div class='py-1'>${joined}</div>`;
+          });
+          return parts.join("");
+        }
+
+        React.useEffect(() => {
+          if (!tokenizer) return;
+          const html = processText(input);
+          setOutputHtml(html);
+        }, [tokenizer, input, showSegments]);
+
+        function downloadHtml() {
+          const blob = new Blob([
+            `<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>` +
+              `<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN',Meiryo;padding:18px} ruby rt{font-size:0.6em}</style>` +
+              `<div>${outputHtml}</div>`,
+          ], { type: "text/html;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "furigana.html";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        return (
+          <div className="p-4 max-w-3xl mx-auto">
+            <h1 className="text-2xl font-semibold mb-3">日语分段 & 假名标注工具</h1>
+
+            <div className="mb-3">
+              <label className="block text-sm font-medium">输入日语句子</label>
+              <textarea
+                rows={6}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full mt-2 p-3 rounded-md border shadow-sm"
+                placeholder="把日语句子粘贴到这里，支持多句。"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 mb-4">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={showSegments} onChange={(e) => setShowSegments(e.target.checked)} /> 显示分词间隔
+              </label>
+              <button
+                onClick={() => {
+                  if (!tokenizer) return;
+                  const html = processText(input);
+                  setOutputHtml(html);
+                }}
+                className="px-3 py-2 bg-sky-600 text-white rounded-md"
+              >
+                处理
+              </button>
+              <button onClick={downloadHtml} className="px-3 py-2 bg-gray-700 text-white rounded-md">
+                下载 HTML
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-sm text-gray-600 mb-1">输出预览</div>
+              <div className="p-4 border rounded-md bg-white" style={{ minHeight: 120 }}>
+                {loading && <div className="text-gray-500">正在加载分词器...</div>}
+                {error && <div className="text-red-500">{error}</div>}
+                {!loading && !error && <div dangerouslySetInnerHTML={{ __html: outputHtml || "(无内容)" }} />}
+              </div>
+            </div>
+
+            <div className="text-sm text-gray-500">
+              在 Safari → 分享 → 添加到主屏幕，可离线使用。
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<FuriganaTool />);
+    </script>
+  </body>
+</html>
