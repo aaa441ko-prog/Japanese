@@ -79,9 +79,16 @@ kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
 
   console.log('Tokenizer ready');
 
-  document.getElementById("process").addEventListener("click", () => {
+  // 只绑定一次事件
+  const button = document.getElementById("process");
+  const outputDiv = document.getElementById("output");
+
+  button.addEventListener("click", () => {
     const text = document.getElementById("input").value.trim();
     if (!text) return;
+
+    // 清空上一次输出
+    outputDiv.innerHTML = '';
 
     // 按句号、问号、感叹号分句
     const sentences = text.split(/(?<=[。！？!?])/u).map(s => s.trim()).filter(Boolean);
@@ -94,9 +101,10 @@ kuromoji.builder({ dicPath: './dict/' }).build((err, tokenizer) => {
       }).join('');
     });
 
-    document.getElementById("output").innerHTML = annotated.join('<br>');
+    outputDiv.innerHTML = annotated.join('<br>');
   });
 });
 </script>
 </body>
 </html>
+
