@@ -1,19 +1,65 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Japanese Helper</title>
-  <link rel="stylesheet" href="./assets/style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Japanese Furigana Tool</title>
+<style>
+  body { font-family: "Noto Sans JP", sans-serif; background:#fafafa; margin:0; padding:1rem; display:flex; flex-direction:column; align-items:center;}
+  main { width:90%; max-width:600px; background:white; border-radius:12px; box-shadow:0 0 10px rgba(0,0,0,0.1); padding:20px; }
+  textarea { width:100%; font-size:1rem; margin-top:1rem; padding:10px; resize:vertical; }
+  button { margin-top:1rem; background:#0078d7; color:white; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; }
+  button:hover { background:#005fa3; }
+  #output { margin-top:1rem; padding:10px; background:#f4f4f4; border-radius:6px; white-space:pre-wrap; }
+  ruby rt { font-size:0.6em; }
+</style>
 </head>
 <body>
-  <main>
-    <h1>日语句子分段与假名标注工具</h1>
-    <textarea id="input" placeholder="输入日语句子..." rows="5"></textarea>
-    <button id="process">分段并标注</button>
-    <pre id="output"></pre>
-  </main>
-  <footer>© 2025 Japanese Helper</footer>
-  <script src="./assets/script.js"></script>
+<main>
+  <h1>日语句子分段 & 假名标注工具</h1>
+  <textarea id="input" rows="5" placeholder="输入日语句子..."></textarea>
+  <button id="process">处理</button>
+  <div id="output"></div>
+</main>
+
+<script>
+// === 简单离线假名标注逻辑 ===
+// 这里只做示例，使用小词典
+const dictionary = {
+  "天気": "てんき",
+  "今日": "きょう",
+  "いい": "いい",
+  "です": "です",
+  "明日": "あした",
+  "頑張ろう": "がんばろう"
+};
+
+function hasKanji(str) { return /[一-龯]/.test(str); }
+
+function annotateFurigana(text) {
+  // 按句子分割
+  const sentences = text.split(/(?<=[。！？!?.])/u).map(s => s.trim()).filter(Boolean);
+  const annotated = sentences.map(sentence => {
+    // 按空格或汉字/假名分词
+    const words = sentence.match(/[\u4E00-\u9FFF]+|[ぁ-んァ-ン]+|[^\s]/g) || [];
+    const htmlWords = words.map(w => {
+      if (dictionary[w]) {
+        return `<ruby><rb>${w}</rb><rt>${dictionary[w]}</rt></ruby>`;
+      }
+      return w;
+    });
+    return htmlWords.join(' ');
+  });
+  return annotated.join('<br>');
+}
+
+document.getElementById("process").addEventListener("click", () => {
+  const text = document.getElementById("input").value.trim();
+  if (!text) return;
+  const html = annotateFurigana(text);
+  document.getElementById("output").innerHTML = html;
+});
+</script>
 </body>
 </html>
+
